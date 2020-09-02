@@ -1,0 +1,83 @@
+version: '3'
+services:
+  redis1:
+    image: redis
+    ports:
+      - "6379:6379"
+    container_name: "redis1"
+    networks: 
+      - dev
+  mysql1:
+    image: centos/mysql-80-centos7
+    environment:
+      MYSQL_ROOT_PASSWORD: "root"
+    ports: 
+      - "3306:3306"
+    container_name: "mysql1"
+    networks: 
+      - dev
+  web1:
+    build: .
+    ports: 
+      - "80:80"
+
+    container_name: "web1"
+    command: > 
+      sh -c 
+      "
+       su magento&&
+       composer create-project --repository-url=https://repo.magento.com/ magento/project-community-edition /var/www/html &&
+       in/magento setup:install \
+       --base-url=http://192.168.8.199 \
+       --db-host=mysql1 \
+       --db-name=magento \
+       --db-user=root \
+       --db-password=root \
+       --admin-firstname=admin \
+       --admin-lastname=admin \
+       --admin-email=admin@admin.com \
+       --admin-user=admin \
+       --admin-password=Pass123! \
+       --language=en_US \
+       --currency=USD \
+       --timezone=America/Chicago \
+       --use-rewrites=1
+       --elasticsearch-host=es01		
+      "
+    volumes:
+      - ./auth.json:/home/magento/.composer/auth.json
+      - ./httpd.conf:/etc/httpd/conf/httpd.conf
+      - ./html/:/var/www/html/
+    networks: 
+      - dev
+      - pro
+
+  es01:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.9.0
+    container_name: es01
+    environment:
+      - node.name=es01
+      - discovery.type=single-node
+      - http.cors.enabled=true
+      - http.cors.allow-credentials=true
+      - http.cors.allow-headers=X-Requested-With,X-Auth-Token,Content-Type,Content-Length,Authorization
+      - http.cors.allow-origin=/https?:\/\/localhost(:[0-9]+)?/
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+     
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    
+    ports:
+      - "9200:9200"
+
+    networks:
+      - dev
+      - pro
+
+networks:
+  dev:
+    driver: bridge
+  pro:
+    driver: bridge
