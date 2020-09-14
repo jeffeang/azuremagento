@@ -19,7 +19,7 @@ services:
     networks: 
       - dev
   web1:
-    build: .
+    image: mjweb/dockermage:v1
     ports: 
       - "80:80"
     container_name: "web1"
